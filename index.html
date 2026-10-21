@@ -13,6 +13,7 @@
       --text: #333;  
       --gov-bg: #E3F2FD;  
       --opp-bg: #FFEBEE;  
+      --topic-bg: #FFF8E1;
     }  
     body {  
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;  
@@ -86,6 +87,23 @@
       margin-bottom: 4px;  
       font-size: 0.95rem;  
     }  
+
+    .topic-card {
+      background-color: var(--topic-bg);
+      border: 1px solid #FFE082;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+    .topic-list {
+      margin: 8px 0 0 0;
+      padding-left: 20px;
+    }
+    .topic-list li {
+      font-size: 0.95rem;
+      color: #5D4037;
+      margin-bottom: 6px;
+    }
   
     .row { display: flex; gap: 8px; }  
     .row > * { flex: 1; }  
@@ -126,6 +144,15 @@
   
   <div class="card" id="resultCard" style="display:none; margin-top: 16px;">  
     <h2>チーム分け結果</h2>  
+
+    <div class="topic-card">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: bold; font-size: 0.95rem;">📢 本日の英語ディベート論題（自動抽出）</span>
+        <button onclick="pickRandomTopics()" style="width: auto; padding: 4px 8px; font-size: 0.8rem; background: #FFB300;">別論題を抽出</button>
+      </div>
+      <ol class="topic-list" id="topicList"></ol>
+    </div>
+
     <div class="row">  
       <button onclick="generateTeams()">再振り分け（被り回避）</button>  
       <button class="btn-secondary" onclick="copyResults()">結果コピー</button>  
@@ -139,8 +166,19 @@
   
 <script>  
   let previousPairs = new Set();  
-  
-  // 読み込み時に保存されたデータを復元  
+
+  // 大会名と年度付きの論題データベース
+  const motionDatabase = [
+    { text: "THW ban social media for children under 16.", tournament: "HPDU", year: "2024" },
+    { text: "THW abolish school uniforms in high schools.", tournament: "HEnDA", year: "2023" },
+    { text: "THBT AI technology will do more harm than good to human society.", tournament: "PDA", year: "2023" },
+    { text: "THW introduce a four-day workweek.", tournament: "WSDC", year: "2022" },
+    { text: "THW make university education free for all students.", tournament: "HPDU推奨", year: "2024" },
+    { text: "THBT space exploration should be prioritized over deep ocean exploration.", tournament: "HEnDA", year: "2022" },
+    { text: "THW mandate voting in national elections.", tournament: "PDA", year: "2024" },
+    { text: "THW ban private cars in major city centers.", tournament: "WSDC", year: "2023" }
+  ];
+
   window.addEventListener('DOMContentLoaded', () => {  
     const savedMembers = localStorage.getItem('saved_members_input');  
     if (savedMembers !== null) {  
@@ -160,7 +198,7 @@
       document.getElementById('teamPairSelect').value = savedPairs;  
     }  
   });  
-  
+
   document.getElementById('memberInput').addEventListener('input', () => {  
     localStorage.setItem('saved_members_input', document.getElementById('memberInput').value);  
     updateCount();  
@@ -177,6 +215,15 @@
   document.getElementById('teamPairSelect').addEventListener('change', () => {  
     localStorage.setItem('saved_team_pairs', document.getElementById('teamPairSelect').value);  
   });  
+
+  // 大会名・年度つき論題をランダムに2つ抽出
+  function pickRandomTopics() {
+    const shuffled = [...motionDatabase].sort(() => Math.random() - 0.5);
+    const selected = shuffled.slice(0, 2);
+    
+    const topicListEl = document.getElementById('topicList');
+    topicListEl.innerHTML = selected.map(item => `<li><strong>[${item.tournament} ${item.year}]</strong> ${item.text}</li>`).join('');
+  }
   
   function updateCount() {  
     const members = getMemberList('memberInput');  
@@ -195,7 +242,7 @@
     const fixedJudges = getMemberList('fixedJudgeInput');  
     const teamSize = parseInt(document.getElementById('teamSizeInput').value, 10) || 3;  
     const numPairs = parseInt(document.getElementById('teamPairSelect').value, 10) || 1;  
-    const numTeams = numPairs * 2; // 組数 × 2 = 総チーム数  
+    const numTeams = numPairs * 2;  
   
     const errorEl = document.getElementById('errorMessage');  
     errorEl.innerText = '';  
@@ -211,7 +258,6 @@
       return;  
     }  
   
-    // 組み合わせ最適化（直前ペア回避）  
     let bestTeams = null;  
     let bestLeftovers = [];  
     let minScore = Infinity;  
@@ -226,7 +272,6 @@
         teams[idx % numTeams].push(m);  
       });  
   
-      // スコア計算（前回の被り）  
       const score = calculateHistoryScore(teams);  
       if (score < minScore) {  
         minScore = score;  
@@ -236,10 +281,10 @@
       }  
     }  
   
-    // 全Judgeメンバー（事前指定 + あまり）  
     const allJudges = [...fixedJudges, ...bestLeftovers];  
   
     saveCurrentPairs(bestTeams);  
+    pickRandomTopics();  
     displayResults(bestTeams, allJudges, numPairs);  
   }  
   
@@ -274,13 +319,11 @@
     teamsDisplay.innerHTML = '';  
     judgesDisplay.innerHTML = '';  
   
-    // Judgesの組分け分配 (judge1 -> judge2 -> judge3の順に均等分配)  
     const judgeGroups = Array.from({ length: numPairs }, () => []);  
     allJudges.forEach((m, idx) => {  
       judgeGroups[idx % numPairs].push(m);  
     });  
   
-    // Judges表示  
     judgeGroups.forEach((group, idx) => {  
       const card = document.createElement('div');  
       card.className = 'judge-card';  
@@ -290,10 +333,9 @@
       judgesDisplay.appendChild(card);  
     });  
   
-    // チーム表示  
     teams.forEach((team, idx) => {  
       const card = document.createElement('div');  
-      const isGov = (idx + 1) % 2 !== 0; // 奇数チーム: Government, 偶数チーム: Opposition  
+      const isGov = (idx + 1) % 2 !== 0;  
       const pairIndex = Math.ceil((idx + 1) / 2);  
       const teamName = isGov ? `Government ${pairIndex}` : `Opposition ${pairIndex}`;  
         
@@ -313,8 +355,12 @@
   
   function copyResults() {  
     let text = "【チーム分け結果】\n\n";  
+
+    const topics = Array.from(document.querySelectorAll('#topicList li')).map(li => li.innerText);
+    if (topics.length > 0) {
+      text += `■ 本日の論題\n1. ${topics[0]}\n2. ${topics[1]}\n\n`;
+    }
   
-    // Judgesのコピー  
     const judgeCards = Array.from(document.querySelectorAll('.judge-card'));  
     judgeCards.forEach((card) => {  
       const title = card.querySelector('.title').innerText;  
@@ -322,7 +368,6 @@
       text += `■ ${title}\n${names}\n\n`;  
     });  
   
-    // チームのコピー  
     const teams = Array.from(document.querySelectorAll('.team-card'));  
     teams.forEach((card) => {  
       const title = card.querySelector('.team-title').innerText;  
@@ -331,7 +376,7 @@
     });  
   
     navigator.clipboard.writeText(text).then(() => {  
-      alert('チーム分け結果をコピーしました！');  
+      alert('チーム分け結果と論題をコピーしました！');  
     });  
   }  
 </script>  
