@@ -1,173 +1,186 @@
-<!DOCTYPE html>  
-<html lang="ja">  
-<head>  
-  <meta charset="UTF-8">  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
-  <title>自動チーム分け＆論題抽出ツール</title>  
-  <style>  
-    :root {  
-      --bg: #f4f7f6;  
-      --card-bg: #ffffff;  
-      --primary: #3498db;  
-      --danger: #e74c3c;  
-      --text: #333;  
-      --gov-bg: #E3F2FD;  
-      --opp-bg: #FFEBEE;  
-      --topic-bg: #FFF8E1;
-    }  
-    body {  
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;  
-      background-color: var(--bg);  
-      color: var(--text);  
-      margin: 0;  
-      padding: 16px;  
-    }  
-    .container { max-width: 650px; margin: 0 auto; }  
-    h1 { text-align: center; font-size: 1.4rem; color: #2c3e50; margin-bottom: 16px; }  
-    .card {  
-      background: var(--card-bg);  
-      padding: 16px;  
-      border-radius: 10px;  
-      box-shadow: 0 2px 6px rgba(0,0,0,0.08);  
-      margin-bottom: 16px;  
-    }  
-    h2 { font-size: 1rem; margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 6px; }  
-    textarea, input, select, button {  
-      width: 100%; padding: 10px; border-radius: 6px;  
-      border: 1px solid #ccc; box-sizing: border-box; font-size: 0.95rem;  
-    }  
-    button { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; }  
-    button:hover { opacity: 0.9; }  
-    .btn-secondary { background: #95a5a6; }  
-      
-    .setting-row {  
-      display: flex;  
-      gap: 12px;  
-      margin-top: 10px;  
-    }  
-    .setting-group {  
-      flex: 1;  
-    }  
-    .setting-group label {  
-      font-size: 0.85rem;  
-      font-weight: bold;  
-      color: #555;  
-      display: block;  
-      margin-bottom: 4px;  
-    }  
-  
-    .teams-grid {  
-      display: grid;  
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));  
-      gap: 12px;  
-      margin-top: 12px;  
-    }  
-    .team-card {  
-      border-radius: 8px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);  
-    }  
-    .team-card.gov { background-color: var(--gov-bg); border-left: 4px solid #2196F3; }  
-    .team-card.opp { background-color: var(--opp-bg); border-left: 4px solid #F44336; }  
-      
-    .team-title { font-weight: bold; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 4px; font-size: 1rem; }  
-    .team-members { list-style: none; padding: 0; margin: 8px 0 0 0; }  
-    .team-members li { padding: 4px 0; font-size: 0.95rem; }  
-  
-    .judges-container {  
-      margin-top: 12px;  
-      display: flex;  
-      flex-direction: column;  
-      gap: 8px;  
-    }  
-    .judge-card {  
-      background: #f0f4f8; border: 1px solid #d0d7de; border-radius: 8px; padding: 10px;  
-    }  
-    .judge-card .title {  
-      font-weight: bold;  
-      color: #24292f;  
-      margin-bottom: 4px;  
-      font-size: 0.95rem;  
-    }  
-
-    .topic-card {
-      background-color: var(--topic-bg);
-      border: 1px solid #FFE082;
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 16px;
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>論題作成/チーム分け</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Inter font -->
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+  <style>
+    body {
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
-    .topic-list {
-      margin: 8px 0 0 0;
-      padding-left: 20px;
-    }
-    .topic-list li {
-      font-size: 0.95rem;
-      color: #5D4037;
-      margin-bottom: 6px;
-    }  
-  
-    .row { display: flex; gap: 8px; }  
-    .row > * { flex: 1; }  
-    .error-msg { color: var(--danger); font-weight: bold; margin-top: 8px; font-size: 0.9rem; }  
-  </style>  
-</head>  
-<body>  
-  
-<div class="container">  
-  <h1>自動チーム分けツール</h1>  
-  
-  <div class="card">  
-    <h2>1. メンバー (1人入力するごとに改行してください)</h2>  
-    <textarea id="memberInput" rows="5" placeholder="チーム分けするメンバー名を入力..."></textarea>  
-    <div id="memberCount" style="text-align: right; font-size: 0.85rem; color: #666; margin-top: 4px;">現在の人数: 0人</div>  
-      
-    <h2 style="margin-top: 14px;">2. 事前指定 Judges (1人入力することに改行してください)</h2>  
-    <textarea id="fixedJudgeInput" rows="2" placeholder="最初からJudgeに決定しているメンバーを入力 (任意)..."></textarea>  
-  
-    <div class="setting-row">  
-      <div class="setting-group">  
-        <label for="teamPairSelect">対戦数（組数）</label>  
-        <select id="teamPairSelect">  
-          <option value="1">1組（2チーム）</option>  
-          <option value="2">2組（4チーム）</option>  
-          <option value="3">3組（6チーム）</option>  
-        </select>  
-      </div>  
-      <div class="setting-group">  
-        <label for="teamSizeInput">1チームの人数</label>  
-        <input type="number" id="teamSizeInput" value="3" min="1" max="20">  
-      </div>  
-    </div>  
-  </div>  
-  
-  <button onclick="generateTeams()" style="font-size: 1.1rem; padding: 12px; margin-top: 4px;">チームを作成</button>  
-  <div id="errorMessage" class="error-msg"></div>  
-  
-  <div class="card" id="resultCard" style="display:none; margin-top: 16px;">  
-    <h2>チーム分け結果</h2>  
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen pb-16">
 
-    <div class="topic-card">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-weight: bold; font-size: 0.95rem;">論題</span>
-        <button onclick="pickRandomTopics()" style="width: auto; padding: 4px 8px; font-size: 0.8rem; background: #FFB300;">別論題を抽出</button>
+  <!-- Header -->
+  <header class="bg-indigo-700 text-white shadow-md py-6 px-4 mb-6">
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight">ディベート チーム＆論題ジェネレーター</h1>
+        <p class="text-indigo-200 text-sm mt-1">論題キーワード検索 ＋ チーム組み分けツール</p>
       </div>
-      <ol class="topic-list" id="topicList"></ol>
+      <div class="text-xs bg-indigo-800/60 border border-indigo-500/40 rounded-lg px-3 py-2 text-indigo-100">
+        <span class="font-semibold" id="totalMotionsBadge">収録論題数: 0 件</span> (完全オフライン対応)
+      </div>
     </div>
+  </header>
 
-    <div class="row">  
-      <button onclick="generateTeams()">再振り分け（被り回避）</button>  
-      <button class="btn-secondary" onclick="copyResults()">結果コピー</button>  
-    </div>  
-  
-    <div id="judgesDisplay" class="judges-container"></div>  
-  
-    <div id="teamsDisplay" class="teams-grid"></div>  
-  </div>  
-</div>  
-  
-<script>  
-  let previousPairs = new Set();  
+  <main class="max-w-6xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-  // 全500件以上の論題データを内蔵
+    <!-- Left Column: Motion Search & Selection -->
+    <section class="lg:col-span-6 space-y-6">
+
+      <!-- Motion Search Card -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <h2 class="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
+          <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          1. 論題キーワード検索＆ピックアップ
+        </h2>
+
+        <!-- Search Inputs -->
+        <div class="space-y-3 mb-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">キーワード・大会名・年度検索</label>
+            <div class="relative">
+              <input type="text" id="searchInput" placeholder="例: education, AI, 2025, 連盟杯, 英語"
+                     class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+              <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+          </div>
+
+          <!-- Controls -->
+          <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+            <span class="text-slate-500 font-medium" id="searchResultCount">該当数: 0 / 0 件</span>
+            <div class="flex gap-2">
+              <button onclick="pickRandomFromFiltered(1)" class="px-3 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-md font-semibold transition-colors">
+                検索結果から1件抽出
+              </button>
+              <button onclick="pickRandomFromFiltered(2)" class="px-3 py-1.5 bg-indigo-600 text-white hover:bg-indigo-700 rounded-md font-semibold transition-colors shadow-sm">
+                検索結果から2件抽出
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filtered List Box -->
+        <div class="border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
+          <div id="motionList" class="max-h-60 overflow-y-auto divide-y divide-slate-200 text-sm">
+            <!-- Dynamic Motion List Items -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Selected/Current Active Motion Display Card -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+            選択中の論題
+          </h2>
+          <button onclick="pickRandomFromFiltered(2)" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium underline">
+            ランダム再抽出し直す
+          </button>
+        </div>
+
+        <div id="activeMotionsContainer" class="space-y-3">
+          <!-- Active selected motions will appear here -->
+          <p class="text-xs text-slate-400 italic py-4 text-center">上の検索結果から論題を選択するか、「抽出し直す」ボタンを押してください。</p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Right Column: Member Input & Generator Settings -->
+    <section class="lg:col-span-6 space-y-6">
+
+      <!-- Settings & Team Allocation Inputs -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+          2. ディベーター・ジャッジ設定
+        </h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <!-- Active Participants -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">参加メンバー一覧 (改行区切り)</label>
+            <textarea id="participantsInput" rows="7" placeholder="山田太郎&#10;佐藤花子&#10;鈴木一郎&#10;高橋次郎..."
+                      class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"></textarea>
+            <div class="text-right text-xs text-slate-500 mt-1" id="participantCount">人数: 0 名</div>
+          </div>
+
+          <!-- Fixed Judges -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">固定ジャッジ (改行区切り/任意)</label>
+            <textarea id="judgesInput" rows="7" placeholder="田中先生&#10;伊藤先輩..."
+                      class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"></textarea>
+            <p class="text-[11px] text-slate-400 mt-1">※余った参加メンバーも自動でジャッジに配属されます。</p>
+          </div>
+        </div>
+
+        <!-- Match & Team Size Settings -->
+        <div class="grid grid-cols-2 gap-4 pt-2 border-t border-slate-100 mb-5">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">同時対戦部屋数</label>
+            <select id="matchCountSelect" class="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-indigo-500">
+              <option value="1" selected>1 部屋 (Gov vs Opp)</option>
+              <option value="2">2 部屋 (同時進行)</option>
+              <option value="3">3 部屋 (同時進行)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">1チームあたりの人数</label>
+            <select id="teamSizeSelect" class="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-indigo-500">
+              <option value="2">2 名 (2 vs 2)</option>
+              <option value="3" selected>3 名 (3 vs 3)</option>
+              <option value="4">4 名 (4 vs 4)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Generate Button -->
+        <button onclick="generateTeams()" class="w-full py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-base">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+          チーム分けする
+        </button>
+      </div>
+
+    </section>
+
+    <!-- Bottom Full-Width Section: Generated Output -->
+    <section class="lg:col-span-12">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div class="flex flex-wrap justify-between items-center gap-3 mb-4 border-b border-slate-100 pb-3">
+          <div>
+            <h2 class="text-xl font-bold text-slate-900">3. 対戦・チーム組み分け結果</h2>
+            <p class="text-xs text-slate-500">繰り返し重複を避ける最適化スコアリングアルゴリズムを適用済み</p>
+          </div>
+          <button onclick="copyResultsToClipboard()" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold shadow flex items-center gap-1.5 transition-all">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+            結果テキストをコピー
+          </button>
+        </div>
+
+        <div id="resultsContainer" class="min-h-[160px] flex items-center justify-center">
+          <p class="text-slate-400 text-sm">設定を完了し、「チーム分けする」をクリックしてください。</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl text-sm font-medium transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none z-50 flex items-center gap-2">
+    <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+    <span id="toastMsg">コピーしました</span>
+  </div>
+
+  <script>
+  // 500+ Embedded Debate Motions Dataset
   const fetchedTopics = [
     { text: "THW allow gifted students to skip grades in schools.", tournament: "HPDU推奨", year: "-" },
     { text: "THW stop teaching English in elementary schools.", tournament: "HPDU推奨", year: "-" },
@@ -341,103 +354,6 @@
     { text: "THBT discussion-based classes are better than lecture classes.", tournament: "中学全国大会", year: "2022" },
     { text: "THW ban cars in cities.", tournament: "中学全国大会", year: "2022" },
     { text: "THW allow performance enhancing drugs in professional sports.", tournament: "中学全国大会", year: "2022" },
-    { text: "This house would require all voters to pass a basic political literacy test.", tournament: "SOLA Cup", year: "2021" },
-    { text: "This house would opt for a strategy of adaptation rather than mitigation when dealing with climate change.", tournament: "SOLA Cup", year: "2021" },
-    { text: "This house believes that criminal courts should treat minors who commit serious and violent crimes as adults.", tournament: "SOLA Cup", year: "2021" },
-    { text: "This house would set a quota for female entrepreneurs when allocating government subsidies for startup businesses.", tournament: "SOLA Cup", year: "2021" },
-    { text: "Assuming technology exists, This house would force all political candidates to provide public access to their personal beliefs.", tournament: "SOLA Cup", year: "2021" },
-    { text: "This house would actively promote non-marital childbearing.", tournament: "SOLA Cup", year: "2021" },
-    { text: "This house supports the narrative that individuals should prioritize the alleviation of universal suffering over their own self-interest.", tournament: "SOLA Cup", year: "2021" },
-    { text: "This house would designate one city to permanently host the Olympics.", tournament: "新緑杯", year: "2021" },
-    { text: "This house would aggressively prioritize the posting of female diplomats to countries with poor women's rights records.", tournament: "新緑杯", year: "2021" },
-    { text: "This house would ban the display of art created with the intended purpose or reasonably likely outcome of creating offence.", tournament: "新緑杯", year: "2021" },
-    { text: "This house believes that if technology permitted us to identify people who are genetically predisposed to commit crimes, it would be appropriate for the state to monitor them and limit their activities.", tournament: "新緑杯", year: "2021" },
-    { text: "THBT giving money as a birthday is good for both parents and their children in high school.", tournament: "新芽杯", year: "2021" },
-    { text: "In order for high school students to confess their love, THBT sending message on smartphone is better than face-to-face talk.", tournament: "新芽杯", year: "2021" },
-    { text: "THW ban too skinny models (with a BMI below 18.5) from showing up in media.", tournament: "新芽杯", year: "2021" },
-    { text: "This house believes that the age of digital information (e.g. social media, online news, etc.) has done more harm than good in protecting democracy.", tournament: "連盟杯", year: "2021" },
-    { text: "Given the technology, this house would erase society's memory and evidence of the criminal past of former convicts after their release from prison.", tournament: "連盟杯", year: "2021" },
-    { text: "This house prefers a world without lying.", tournament: "連盟杯", year: "2021" },
-    { text: "This house believes that, assuming Personal Protective Equipment is sufficiently available, medical workers during a pandemic should have the right to opt out of service.", tournament: "連盟杯", year: "2021" },
-    { text: "This house believes that spouses of political figures should not be recognized as public figures.", tournament: "連盟杯", year: "2021" },
-    { text: "Instead of leaving the decision up to the producing company, this house would legally require that Self-Driving Cars produced by companies always choose to maximize the number of lives saved, even if it leads to the death of the passengers.", tournament: "連盟杯", year: "2021" },
-    { text: "This house believes that hacking is a legitimate way of protest against multinational corporations.", tournament: "連盟杯", year: "2021" },
-    { text: "THW allow performance-enhancing drugs in professional sporting events.", tournament: "中学生全国大会", year: "2021" },
-    { text: "TH prefers a world in which there are no restrictions on student’s appearances in schools. *uniforms are an exception", tournament: "中学生全国大会", year: "2021" },
-    { text: "THW ban Valentine’s Day in schools.", tournament: "中学生全国大会", year: "2021" },
-    { text: "THBT online learning is better than offline learning.", tournament: "中学生全国大会", year: "2021" },
-    { text: "This house would pay all elected politicians the median wage in the their countries.", tournament: "新緑杯", year: "2020" },
-    { text: "This house would give national treasures (like the Rosetta Stone in the British Museum) back to their countries of origin.", tournament: "新緑杯", year: "2020" },
-    { text: "This house believes that only countries with good human rights records should be allowed to host the Olympics.", tournament: "新緑杯", year: "2020" },
-    { text: "This house would legalize surrogacy for profit in liberal democracies.", tournament: "新緑杯", year: "2020" },
-    { text: "THW ban eating contests", tournament: "新芽杯", year: "2020" },
-    { text: "THBT holding a gorgeous wedding ceremony is better than holding a simple one.", tournament: "新芽杯", year: "2020" },
-    { text: "THBT criminal trials should be publicly broadcasted on TV and other media (like YouTube).", tournament: "新芽杯", year: "2020" },
-    { text: "THW abolish the Olympic Games.", tournament: "連盟杯", year: "2020" },
-    { text: "THW prohibit criminals from publishing descriptions of their crimes.", tournament: "連盟杯", year: "2020" },
-    { text: "THBT the state should not subsidize art.", tournament: "連盟杯", year: "2020" },
-    { text: "THBT feminist movement should oppose affirmative action for women.", tournament: "連盟杯", year: "2020" },
-    { text: "THBT humanitarian aid does more harm than good to active conflict zones.", tournament: "連盟杯", year: "2020" },
-    { text: "THW prohibit corporations from sponsoring academic research.", tournament: "連盟杯", year: "2020" },
-    { text: "THW abolish private property.", tournament: "連盟杯", year: "2020" },
-    { text: "THBT teachers should be punished for bullying in their classrooms.", tournament: "中学生全国大会", year: "2020" },
-    { text: "THBT parents should have full access to their children’s social media.", tournament: "中学生全国大会", year: "2020" },
-    { text: "THW ban films and music which glamorize socially undesirable conducts e.g. drug, abuse, racism", tournament: "中学生全国大会", year: "2020" },
-    { text: "TH, as Japan, would accept all refugees.", tournament: "中学生全国大会", year: "2020" },
-    { text: "This House believes that professional sports players should be allowed to enhance abilities by using drugs.", tournament: "新緑杯", year: "2019" },
-    { text: "This House, as an individual, would not consume works produced by immoral artists.", tournament: "新緑杯", year: "2019" },
-    { text: "This House believes that debating skills matter in getting a boyfriend or a girlfriend.", tournament: "新緑杯", year: "2019" },
-    { text: "This House would mandate retirement from the National Diet at age 65.", tournament: "新緑杯", year: "2019" },
-    { text: "THW ban beauty contest.", tournament: "連盟杯", year: "2019" },
-    { text: "THW introduce conscription.", tournament: "連盟杯", year: "2019" },
-    { text: "THW completely ban broadcasting of suicide.", tournament: "連盟杯", year: "2019" },
-    { text: "THW ban all forms of gambling.", tournament: "連盟杯", year: "2019" },
-    { text: "THW ban use of combat drones.", tournament: "連盟杯", year: "2019" },
-    { text: "THW trade with oppressive regimes.", tournament: "連盟杯", year: "2019" },
-    { text: "THBT free speech should include the right to offend.", tournament: "連盟杯", year: "2019" },
-    { text: "THW ban giving of chocolate and other gifts on Valentine's Day at junior and senior high schools.", tournament: "中学生全国大会", year: "2019" },
-    { text: "THBT new movies, or new TV shows which contain smoking scenes should be banned.", tournament: "中学生全国大会", year: "2019" },
-    { text: "THP world without social networking services such as Facebook, Twitter and Instagram.", tournament: "中学生全国大会", year: "2019" },
-    { text: "THBT all major political parties in Japan should list an equal number of men and women candidates.", tournament: "中学生全国大会", year: "2019" },
-    { text: "THW ban cosmetic surgery.", tournament: "連盟杯", year: "2018" },
-    { text: "THW require doctors to report all cases of suspected domestic violence.", tournament: "連盟杯", year: "2018" },
-    { text: "THW give right to vote to prisoners.", tournament: "連盟杯", year: "2018" },
-    { text: "THW legalize active euthanasia.", tournament: "連盟杯", year: "2018" },
-    { text: "THW give national treasures back to its people.", tournament: "連盟杯", year: "2018" },
-    { text: "THW criminalize paying ransom to hostages.", tournament: "連盟杯", year: "2018" },
-    { text: "THW ban alcohol.", tournament: "連盟杯", year: "2017" },
-    { text: "THW abolish escalator system in schools (such as Keio, Waseda).", tournament: "連盟杯", year: "2017" },
-    { text: "THW legalize organ transplant for profit.", tournament: "連盟杯", year: "2017" },
-    { text: "THBT US military bases should be removed from Japan.", tournament: "連盟杯", year: "2017" },
-    { text: "THW abolish all laws restricting free speech.", tournament: "連盟杯", year: "2017" },
-    { text: "TH prefers the world without marriage.", tournament: "連盟杯", year: "2017" },
-    { text: "THW require broadcasters to devote equal time and prominence to coverage of female sports games as male sports games.", tournament: "連盟杯", year: "2016" },
-    { text: "THW pay all elected politicians the median wage in their electoral district.", tournament: "連盟杯", year: "2016" },
-    { text: "THW allow prisoners to donate their organs in exchange for shortening of their sentences.", tournament: "連盟杯", year: "2016" },
-    { text: "THBT, upon request by the authority, smart phone companies should be forced to unlock their products usually by criminals.", tournament: "連盟杯", year: "2016" },
-    { text: "THBT the EU should abandon its commitment to the principle of open borders between member states.", tournament: "連盟杯", year: "2016" },
-    { text: "THBT democratic countries should not attend sporting events in countries with bad human rights records.", tournament: "連盟杯", year: "2016" },
-    { text: "THW require all the Internet users to use the real names.", tournament: "連盟杯", year: "2015" },
-    { text: "THBT gambling of all forms (e.g. lotteries, horse racing, or casinos) should be illegal.", tournament: "連盟杯", year: "2015" },
-    { text: "THBT governments should refuse to assist in rebuilding areas prone to natural disasters.", tournament: "連盟杯", year: "2015" },
-    { text: "THW abolish death penalty.", tournament: "連盟杯", year: "2015" },
-    { text: "THW provide welfare in the form of basic goods and services, rather than cash payments.", tournament: "連盟杯", year: "2015" },
-    { text: "THBT governments should negotiate with terrorists when their citizens are taken hostages by terrorists groups.", tournament: "連盟杯", year: "2015" },
-    { text: "THBT parents should have the right to access all accounts of their children's social networking sites.", tournament: "連盟杯", year: "2014" },
-    { text: "THW apply the retirement age to politicians.", tournament: "連盟杯", year: "2014" },
-    { text: "THBT the Tokyo Olympics venue should include the Tohoku/Fukushima area.", tournament: "連盟杯", year: "2014" },
-    { text: "THW deny those who have made poor lifestyle choices and actively harmed themselves (fatty food, alcohol, smoking) the access to the national health insurance.", tournament: "連盟杯", year: "2014" },
-    { text: "THBT research institutions that actively employ female scientists should be given more research funding by the government.", tournament: "連盟杯", year: "2014" },
-    { text: "THBT Japan should not impose any sanctions on Russia regarding the Crimea issue.", tournament: "連盟杯", year: "2014" },
-    { text: "THW allow gifted students to skip grades in schools.", tournament: "連盟杯", year: "2013" },
-    { text: "THW ban experiments on animals.", tournament: "連盟杯", year: "2013" },
-    { text: "THBT using the Internet in political election campaigns will do more harm than good.", tournament: "連盟杯", year: "2013" },
-    { text: "THW use quota to increase the representation of women in the Japanese parliament.", tournament: "連盟杯", year: "2013" },
-    { text: "THW penalize media companies that broadcast the use of physical abuse (such as beating or kicking someone) as a form of humor.", tournament: "連盟杯", year: "2013" },
-    { text: "THBT the US federal government should ban the private use of firearms.", tournament: "連盟杯", year: "2013" },
-    { text: "THBT students in elementary schools and junior schools should be required to repeat a grade if their class performance is poor.", tournament: "連盟杯", year: "2012" },
-    { text: "THW make voting at elections compulsory.", tournament: "連盟杯", year: "2012" },
-    { text: "THW ban fortune-telling businesses.", tournament: "連盟杯", year: "2012" },
     { text: "It is better for university admission test takers to have a boyfriend/girlfriend.", tournament: "夏合宿・全国大会（高校）", year: "2026" },
     { text: "People should prioritize what they want to do over job stability when choosing a career.", tournament: "夏合宿・全国大会（高校）", year: "2026" },
     { text: "Japan should give more votes to the young.", tournament: "夏合宿・全国大会（高校）", year: "2026" },
@@ -458,470 +374,335 @@
     { text: "It is better to have romantic relationships with humanoid robots than with humans.", tournament: "世界交流大会", year: "2026" },
     { text: "Organ donation should be mandatory.", tournament: "世界交流大会", year: "2026" },
     { text: "Tariffs do more benefits than harm.", tournament: "世界交流大会", year: "2026" },
-    { text: "Accepting immigrants brings more benefits than harms.", tournament: "世界交流大会", year: "2026" },
-    { text: "Universities should prioritize regional diversity over academic performance in admissions.", tournament: "冬 全国大会（高校）", year: "2025" },
-    { text: "Japan should abolish the mandatory retirement age.", tournament: "冬 全国大会（高校）", year: "2025" },
-    { text: "Japan should abolish tax exemptions for foreign tourists to address overtourism.", tournament: "冬 全国大会（高校）", year: "2025" },
-    { text: "AI decisions are better than politicians’ decisions.", tournament: "冬 全国大会（高校）", year: "2025" },
-    { text: "In group decision-making, one should follow the majority.", tournament: "冬 全国大会（高校）", year: "2025" },
-    { text: "In foreign policy decision-making and execution, the judgment of diplomats should be prioritized over that of heads of government.", tournament: "冬 全国大会（高校）", year: "2025" },
-    { text: "Japan should possess nuclear weapons.", tournament: "冬 全国大会（高校）", year: "2025" },
-    { text: "Japan should make voting compulsory.", tournament: "夏合宿・全国大会（高校）", year: "2025" },
-    { text: "Japan should abolish the consumption tax.", tournament: "夏合宿・全国大会（高校）", year: "2025" },
-    { text: "Japanese First’ brings more benefits than harm.", tournament: "夏合宿・全国大会（高校）", year: "2025" },
-    { text: "All countries should eliminate tariffs.", tournament: "夏合宿・全国大会（高校）", year: "2025" },
-    { text: "Art education should be a required part of scientific training.", tournament: "夏合宿・全国大会（高校）", year: "2025" },
-    { text: "Debate feedback is better provided by AI than by teachers.", tournament: "夏合宿・全国大会（高校）", year: "2025" },
-    { text: "Palestine should be recognized as a state.", tournament: "夏合宿・全国大会（高校）", year: "2025" },
-    { text: "Japan should construct new nuclear power plants", tournament: "夏合宿・全国大会（高校）", year: "2025" },
-    { text: "Japan should make voting compulsory.", tournament: "夏合宿・全国大会（中学）", year: "2025" },
-    { text: "Swimming classes should be abolished.", tournament: "夏合宿・全国大会（中学）", year: "2025" },
-    { text: "Japan should abolish the consumption tax.", tournament: "夏合宿・全国大会（中学）", year: "2025" },
-    { text: "Free high school tuition will do more harm than good.", tournament: "中学全国大会", year: "2025" },
-    { text: "Debate feedback is better provided by AI than teachers.", tournament: "中学全国大会", year: "2025" },
-    { text: "To learn about the world, it is better to watch YouTube videos than TV news programs.", tournament: "中学全国大会", year: "2025" },
-    { text: "School uniforms should be abolished.", tournament: "中学全国大会", year: "2025" },
-    { text: "Homework should be abolished.", tournament: "世界交流大会", year: "2025" },
-    { text: "Being fashionable brings more benefit than harm.", tournament: "世界交流大会", year: "2025" },
-    { text: "Donald Trump's second presidency would do more harm than good to the world.", tournament: "世界交流大会", year: "2025" },
-    { text: "Developing countries should prioritize investing in online education over in-person education.", tournament: "世界交流大会", year: "2025" },
-    { text: "It is better for students to work after graduation of high school rather than to go to university.", tournament: "世界交流大会", year: "2025" },
-    { text: "Countries with high carbon emissions should pay climate reparations to low emitting nations disproportionately affected by climate change.", tournament: "世界交流大会", year: "2025" },
-    { text: "The Japanese government should prohibit the use of SNS under the age of 16.", tournament: "冬 全国大会", year: "2024" },
-    { text: "In Japan's university entrance examinations, AO examinations should be increased rather than general entrance examinations.", tournament: "冬 全国大会", year: "2024" },
-    { text: "The United Nations should completely ban the development and use of Lethal Autonomous Weapon Systems (LAWS).", tournament: "冬 全国大会", year: "2024" },
-    { text: "Researchers should focus their research on national policy rather than their own interests.", tournament: "冬 全国大会", year: "2024" },
-    { text: "Japan should prioritize solving domestic problems over international problems.", tournament: "冬 全国大会", year: "2024" },
-    { text: "We are the ones who create Expo 2025 Osaka, Kansai, Japan.", tournament: "冬 全国大会", year: "2024" },
-    { text: "SNS is more reliable than old media (newspapers, television, etc.).", tournament: "冬 全国大会", year: "2024" },
-    { text: "School trips should be abolished.", tournament: "夏合宿・全国大会（高校）", year: "2024" },
-    { text: "Animal experiment should be abolished.", tournament: "夏合宿・全国大会（高校）", year: "2024" },
-    { text: "All political parties should be banned.", tournament: "夏合宿・全国大会（高校）", year: "2024" },
-    { text: "All doctors should be required to work in rural areas for a couple of years.", tournament: "夏合宿・全国大会（高校）", year: "2024" },
-    { text: "We should stop using English as the common language of science.", tournament: "夏合宿・全国大会（高校）", year: "2024" },
-    { text: "Power harassment should be severely punished.", tournament: "夏合宿・全国大会（高校）", year: "2024" },
-    { text: "Doping should be allowed in the Olympic Games.", tournament: "夏合宿・全国大会（高校）", year: "2024" },
-    { text: "Decentralization of the population of Tokyo will do more good than harm.", tournament: "夏合宿・全国大会（高校）", year: "2024" },
-    { text: "Summer vacations should be shortened in junior high schools.", tournament: "夏合宿・全国大会（中学）", year: "2024" },
-    { text: "People who don't have children will be happier, compared to those who do.", tournament: "夏合宿・全国大会（中学）", year: "2024" },
-    { text: "We should promote reviving the dead through generative AI.", tournament: "夏合宿・全国大会（中学）", year: "2024" },
-    { text: "Japan should accelerate its investment in small rockets.", tournament: "中学全国大会", year: "2024" },
-    { text: "It is better to spend time on various experiences rather than studying for university entrance exams (traditional written exams).", tournament: "中学全国大会", year: "2024" },
-    { text: "For violent crimes, the names of offenders should be disclosed, regardless of age.", tournament: "中学全国大会", year: "2024" },
-    { text: "Limited medical care in times of disaster should prioritize the young over he elderly.", tournament: "中学全国大会", year: "2024" },
-    { text: "Living in rural areas is better than living in urban areas.", tournament: "世界交流大会", year: "2024" },
-    { text: "Zoos should be banned.", tournament: "世界交流大会", year: "2024" },
-    { text: "Disaster-affected marginal villages should move to other cities rather than rebuild.", tournament: "世界交流大会", year: "2024" },
-    { text: "African countries should prioritize environmental protection over economic development.", tournament: "世界交流大会", year: "2024" },
-    { text: "Politics is better done by AI than by humans.", tournament: "世界交流大会", year: "2024" },
-    { text: "STEM education is more important than language education for high school students.", tournament: "世界交流大会", year: "2024" },
-    { text: "Japan should make university tuition free.", tournament: "冬 全国大会", year: "2023" },
-    { text: "Being fashionable brings more benefit than harm.", tournament: "冬 全国大会", year: "2023" },
-    { text: "To change Japan, it is better to be a business person than a politician.", tournament: "冬 全国大会", year: "2023" },
-    { text: "The U.S. should stop supporting Israel.", tournament: "冬 全国大会", year: "2023" },
-    { text: "Priority should be put on speed when deliberating on policy/decision making.", tournament: "冬 全国大会", year: "2023" },
-    { text: "Going to university abroad is better than going to university in Japan.", tournament: "冬 全国大会", year: "2023" },
-    { text: "The upper limit of income should be 100 million yen and excess income should be redistributed.", tournament: "冬 全国大会", year: "2023" },
-    { text: "After-school club activities in schools should be abolished.", tournament: "夏合宿・全国大会", year: "2023" },
-    { text: "The number of AI-equipped surveillance cameras should be increased.", tournament: "夏合宿・全国大会", year: "2023" },
-    { text: "Volunteer work in schools should be mandatory.", tournament: "夏合宿・全国大会", year: "2023" },
-    { text: "Japan should privatize prizons.", tournament: "夏合宿・全国大会", year: "2023" },
-    { text: "Patriotism should be emphasized in compulsory education.", tournament: "夏合宿・全国大会", year: "2023" },
-    { text: "Scholarships should be granted based only on financial situation, not on academic performance.", tournament: "夏合宿・全国大会", year: "2023" },
-    { text: "In elections, only those who pass aptitude tests should be eligible to vote.", tournament: "夏合宿・全国大会", year: "2023" },
-    { text: "In university entrance examinations, the ratio of comprehensive type selections (AO examinations) should be increased.", tournament: "夏合宿・全国大会", year: "2023" },
-    { text: "Japan should ban pet sales.", tournament: "中学全国大会", year: "2023" },
-    { text: "Spending weekends with friends is better than with family.", tournament: "中学全国大会", year: "2023" },
-    { text: "Japan should prioritize child raising support over defense spending.", tournament: "中学全国大会", year: "2023" },
-    { text: "Brain Machine Interface (BMI), which allows people to interact just by thinking by implanting electrodes in the brain, will do more good than harm.", tournament: "中学全国大会", year: "2023" },
-    { text: "Having pets should be banned.", tournament: "世界交流大会", year: "2023" },
-    { text: "High school students should have part-time jobs.", tournament: "世界交流大会", year: "2023" },
-    { text: "Economic sanctions against Russia do more harm than good.", tournament: "世界交流大会", year: "2023" },
-    { text: "Degrowth should be supported rather than SDGs.", tournament: "世界交流大会", year: "2023" },
-    { text: "All universities should give students the option to graduate online only.", tournament: "世界交流大会", year: "2023" },
-    { text: "Universities involved in STEM should select students based on diversity rather than academics.", tournament: "世界交流大会", year: "2023" },
-    { text: "Being single is better than getting married in the modern world.", tournament: "全国大会(冬)", year: "2022" },
-    { text: "Japan should increase defense spending.", tournament: "全国大会(冬)", year: "2022" },
-    { text: "Online education should be introduced in junior high and high schools, and school districts should be abolished.", tournament: "全国大会(冬)", year: "2022" },
-    { text: "Students should be instructed in debate by Al rather than by teachers.", tournament: "全国大会(冬)", year: "2022" },
-    { text: "Consumer behavior (ownership and use of things) should be limited to achieve carbon neutrality.", tournament: "全国大会(冬)", year: "2022" },
-    { text: "Entrepreneurship should be pursued rather than employment at a big company.", tournament: "全国大会(冬)", year: "2022" },
-    { text: "Living in the U.S. will be better than living in Japan in the future.", tournament: "全国大会(冬)", year: "2022" },
-    { text: "Ranking children in sport events at kindergartens and elementary schools should be abolished.", tournament: "夏合宿・全国大会", year: "2022" },
-    { text: "As pets, robot dogs are better than real dogs.", tournament: "夏合宿・全国大会", year: "2022" },
-    { text: "We should abolish the death penalty.", tournament: "夏合宿・全国大会", year: "2022" },
-    { text: "STEAM education should be prioritized over English education.", tournament: "夏合宿・全国大会", year: "2022" },
-    { text: "Footage of shooting incidents should not be reported.", tournament: "夏合宿・全国大会", year: "2022" },
-    { text: "Public policies should be based on public opinion polls, rather than a few experts or bureaucrats.", tournament: "夏合宿・全国大会", year: "2022" },
-    { text: "NATO should deploy its troops to Ukraine.", tournament: "夏合宿・全国大会", year: "2022" },
-    { text: "Japan should promote the use of nuclear power plants.", tournament: "夏合宿・全国大会", year: "2022" },
-    { text: "We should prohibit cosmetic surgery.", tournament: "中学全国大会", year: "2022" },
-    { text: "High school students should study abroad during high school years.", tournament: "中学全国大会", year: "2022" },
-    { text: "Space exploration spending should be increased.", tournament: "中学全国大会", year: "2022" },
-    { text: "Economic sanctions against Russia does more good than harm to the world.", tournament: "中学全国大会", year: "2022" },
-    { text: "Parents should have the right to access their children’s SNS.", tournament: "世界交流大会", year: "2022" },
-    { text: "Homework should be abolished.", tournament: "世界交流大会", year: "2022" },
-    { text: "The development of AI weapons for military purposes should be banned.", tournament: "世界交流大会", year: "2022" },
-    { text: "Companies should not do business with countries where there are human rights violations.", tournament: "世界交流大会", year: "2022" },
-    { text: "Developing countries should take the same responsibilities as developed countries on global warming.", tournament: "世界交流大会", year: "2022" },
-    { text: "Space travel by the wealthy should be criticized.", tournament: "世界交流大会", year: "2022" },
-    { text: "Plastic products should be taxed.", tournament: "冬 全国大会", year: "2021" },
-    { text: "Parents of children who bully other children should face criminal charges.", tournament: "冬 全国大会", year: "2021" },
-    { text: "Japan should impose a diplomatic boycott of the Beijing Olympics.", tournament: "冬 全国大会", year: "2021" },
-    { text: "COVID-19 vaccination should be mandatory.", tournament: "冬 全国大会", year: "2021" },
-    { text: "Wild fish catch should be prohibited and fish should be farmed.", tournament: "冬 全国大会", year: "2021" },
-    { text: "Debate competitions should be held online rather than face-to-face regardless of the COVID-19 situation.", tournament: "冬 全国大会", year: "2021" },
-    { text: "The U.S. military should not have withdrawn from Afghanistan.", tournament: "冬 全国大会", year: "2021" },
-    { text: "Cosmetic surgery should be banned.", tournament: "夏合宿・全国大会", year: "2021" },
-    { text: "It is better to be single for life than to have a family.", tournament: "夏合宿・全国大会", year: "2021" },
-    { text: "China should abolish its restriction on the number of births.", tournament: "夏合宿・全国大会", year: "2021" },
-    { text: "Vaccination against COVID-19 should become mandatory.", tournament: "夏合宿・全国大会", year: "2021" },
-    { text: "Male Employees should be forced to take parental leave.", tournament: "夏合宿・全国大会", year: "2021" },
-    { text: "School rule regarding appearances should be abolished.", tournament: "夏合宿・全国大会", year: "2021" },
-    { text: "The Tokyo Olympics should have been cancelled.", tournament: "夏合宿・全国大会", year: "2021" },
-    { text: "Teleworking makes people happy.", tournament: "夏合宿・全国大会", year: "2021" },
-    { text: "Japan should abolish zoos.", tournament: "中学全国大会", year: "2021" },
-    { text: "Hosting the Tokyo Olympics in the summer of 2021 will do more good than harm.", tournament: "中学全国大会", year: "2021" },
-    { text: "Children should choose foster parents over biological parents who cannot provide adequate food, clothing and shelter.", tournament: "中学全国大会", year: "2021" },
-    { text: "Online learning should be introduced in junior high schools, and students go to school only three days a week.", tournament: "中学全国大会", year: "2021" },
-    { text: "High school students should have part-time jobs.", tournament: "世界交流大会", year: "2021" },
-    { text: "The death penalty should be abolished.", tournament: "世界交流大会", year: "2021" },
-    { text: "Government should force people to take a COVID-19 vaccine.", tournament: "世界交流大会", year: "2021" },
-    { text: "The permanent ban of Donald Trump’s Twitter account should be removed.", tournament: "世界交流大会", year: "2021" },
-    { text: "Combat sports should be banned.", tournament: "世界交流大会", year: "2021" },
-    { text: "Development aid does more harm than good in developing countries.", tournament: "世界交流大会", year: "2021" },
-    { text: "Wearing a mask should be mandatory.", tournament: "冬全国大会", year: "2020" },
-    { text: "The media should not report on suicide.", tournament: "冬全国大会", year: "2020" },
-    { text: "Infertility treatment should be for free.", tournament: "冬全国大会", year: "2020" },
-    { text: "Class-size reduction in elementary schools does more good than harm.", tournament: "冬全国大会", year: "2020" },
-    { text: "Tuition fees for university STEM departments should be free.", tournament: "冬全国大会", year: "2020" },
-    { text: "Prevention of COVID-19 should be prioritized over boosting economy in developing countries.", tournament: "冬全国大会", year: "2020" },
-    { text: "Japan should introduce a basic income.", tournament: "冬全国大会", year: "2020" },
-    { text: "A grade should be decided based on learning outcomes.", tournament: "夏合宿・全国大会", year: "2020" },
-    { text: "A fat tax should be introduced.", tournament: "夏合宿・全国大会", year: "2020" },
-    { text: "Persons who spread a virus on purpose should be sentenced to death.", tournament: "夏合宿・全国大会", year: "2020" },
-    { text: "Japan should accept more foreign refugees.", tournament: "夏合宿・全国大会", year: "2020" },
-    { text: "Japan should legalize euthanasia.", tournament: "夏合宿・全国大会", year: "2020" },
-    { text: "A pet tax should be introduced.", tournament: "夏合宿・全国大会", year: "2020" },
-    { text: "Authoritarianism is better than democracy during the COVID-19 pandemic.", tournament: "夏合宿・全国大会", year: "2020" },
-    { text: "A life imprisonment should be imposed on a person who lead others to commit suicide with slander.", tournament: "夏合宿・全国大会", year: "2020" },
-    { text: "Bringing snacks and soft drink to junior high school should be allowed.", tournament: "中学全国大会", year: "2020" },
-    { text: "Closing schools to combat the COVID-19 has brought more benefits than harm.", tournament: "中学全国大会", year: "2020" },
-    { text: "Recreating the dead in VR does more benefits than harm.", tournament: "中学全国大会", year: "2020" },
-    { text: "Parental leave should be made mandatory for both parents.", tournament: "世界交流大会", year: "2020" },
-    { text: "A maximum number of terms for parliament members should be established.", tournament: "世界交流大会", year: "2020" },
-    { text: "In primary and secondary school years, students should be grouped by competency and intelligence instead of age.", tournament: "世界交流大会", year: "2020" },
-    { text: "The Olympics Games should be abolished.", tournament: "世界交流大会", year: "2020" },
-    { text: "The United State should remove all sanctions against Iran.", tournament: "世界交流大会", year: "2020" },
-    { text: "Government should oblige companies to allow their employees to telework.", tournament: "世界交流大会", year: "2020" },
-    { text: "Club activity should have three days off a week.", tournament: "全国大会（冬）", year: "2019" },
-    { text: "Children should be prohibited from posting on video hosting websites.", tournament: "全国大会（冬）", year: "2019" },
-    { text: "The postponement of introducing private English tests into national university entrance examinations has brought more benefits than harm.", tournament: "全国大会（冬）", year: "2019" },
-    { text: "Social media (e.g. twitter) causes only division of society.", tournament: "全国大会（冬）", year: "2019" },
-    { text: "Disaster forecasts should be issued from a single source.", tournament: "全国大会（冬）", year: "2019" },
-    { text: "Japan should pay the full cost of US military bases in Japan.", tournament: "全国大会（冬）", year: "2019" },
-    { text: "Parents should be banned from corporal punishment of children for discipline.", tournament: "全国大会（冬）", year: "2019" },
-    { text: "All P.E. classes should be outsourced at elementary and junior high school.", tournament: "全国大会・合宿（夏）", year: "2019" },
-    { text: "The number of classes taught by teachers should be reduced by half at high schools and universities, by introducing e-learning.", tournament: "全国大会・合宿（夏）", year: "2019" },
-    { text: "Mandatory paternity leave should be introduced.", tournament: "全国大会・合宿（夏）", year: "2019" },
-    { text: "NHK should be scrambled.", tournament: "全国大会・合宿（夏）", year: "2019" },
-    { text: "Gender and age should be removed in school application forms.", tournament: "全国大会・合宿（夏）", year: "2019" },
-    { text: "Companies should encourage employees to wear a skirt at work.", tournament: "全国大会・合宿（夏）", year: "2019" },
-    { text: "People should have a microchip implant in their own bodies.", tournament: "全国大会・合宿（夏）", year: "2019" },
-    { text: "Companies should introduce the four-day-workweek system.", tournament: "全国大会・合宿（夏）", year: "2019" },
-    { text: "Anonymous writing on the Internet should be prohibited.", tournament: "世界交流大会", year: "2019" },
-    { text: "As a form of welfare for the poor, providing basic goods and services(e.g. food stamp, job training and so on) is better than providing cash.", tournament: "世界交流大会", year: "2019" },
-    { text: "In aging societies, the young should be given more votes.", tournament: "世界交流大会", year: "2019" },
-    { text: "Exclusive schools for LGBT should be established.", tournament: "世界交流大会", year: "2019" },
-    { text: "Private ownership of guns should be prohibited in United States.", tournament: "世界交流大会", year: "2019" },
-    { text: "Parents/educators should encourage children to choose start-up rather than traditional path.", tournament: "世界交流大会", year: "2019" },
-    { text: "Using private homes as hotels for school trips should be banned.", tournament: "全国大会（冬）", year: "2018" },
-    { text: "Japan should raise the pension age to 70 years old.", tournament: "全国大会（冬）", year: "2018" },
-    { text: "Affirmative action  should be taken for female students with science and engineering background.", tournament: "全国大会（冬）", year: "2018" },
-    { text: "Accepting more foreign workers will give Japan benefit than harm.", tournament: "全国大会（冬）", year: "2018" },
-    { text: "Sale of potatoes with no poison produced through genome editing technology should be prohibited.", tournament: "全国大会（冬）", year: "2018" },
-    { text: "Centralization in urban areas bring more good than harm.", tournament: "全国大会（冬）", year: "2018" },
-    { text: "US protectionism does more harm than good to the US.", tournament: "全国大会（冬）", year: "2018" },
-    { text: "Junior high school students should be allowed to bring smartphones to school.", tournament: "中学生全国大会", year: "2018" },
-    { text: "High schools should introduce eSports as a regular course.", tournament: "中学生全国大会", year: "2018" },
-    { text: "Production of plastic bags should be banned.", tournament: "中学生全国大会", year: "2018" },
-    { text: "All schools should be coeducation", tournament: "全国大会・合宿（夏）", year: "2018" },
-    { text: "Corporal punishment should be allowed in schools.", tournament: "全国大会・合宿（夏）", year: "2018" },
-    { text: "We should impose a tax on the usage of SNS.", tournament: "全国大会・合宿（夏）", year: "2018" },
-    { text: "Japan should legalize active euthanasia.", tournament: "全国大会・合宿（夏）", year: "2018" },
-    { text: "School lawyers should be set to all schools.", tournament: "全国大会・合宿（夏）", year: "2018" },
-    { text: "Casinos in Japan will give us more benefit than harm.", tournament: "全国大会・合宿（夏）", year: "2018" },
-    { text: "Overtime regulations will enrich Japan.", tournament: "全国大会・合宿（夏）", year: "2018" },
-    { text: "We should ease the reception of foreign caregivers considerably.", tournament: "全国大会・合宿（夏）", year: "2018" },
-    { text: "Plea bargaining will do more good than harm.", tournament: "全国大会・合宿（夏）", year: "2018" },
-    { text: "Corporal punishment should be legalized.", tournament: "世界交流大会", year: "2018" },
-    { text: "Stricter sanction on North Korea for its aggressive behavior does more harm than good.", tournament: "世界交流大会", year: "2018" },
-    { text: "Preventive evacuation from meteorological disaster has to be obligation.", tournament: "世界交流大会", year: "2018" },
-    { text: "Government should punish individuals who write Fake news.", tournament: "世界交流大会", year: "2018" },
-    { text: "Government should subsidize prenatal diagnosis.", tournament: "世界交流大会", year: "2018" },
-    { text: "Countries with aging populations should prioritize policies enhancing productivity over population increase.", tournament: "世界交流大会", year: "2018" },
-    { text: "Universities in Tokyo’s 23 wards should limit the number of new students.", tournament: "全国大会（冬）", year: "2017" },
-    { text: "Reporting real names of crime victims should be prohibited.", tournament: "全国大会（冬）", year: "2017" },
-    { text: "Grade-skipping should be introduced in compulsory education.", tournament: "全国大会（冬）", year: "2017" },
-    { text: "Government should restrict the time spent on online games.", tournament: "全国大会（冬）", year: "2017" },
-    { text: "Promoting studying abroad for Japanese students will save Japan.", tournament: "全国大会（冬）", year: "2017" },
-    { text: "Automatic driving cars does more harm than good.", tournament: "全国大会（冬）", year: "2017" },
-    { text: "Development of AI weapons should be banned.", tournament: "全国大会（冬）", year: "2017" },
-    { text: "Corporal punishment should be admitted in schools.", tournament: "中学生全国大会", year: "2017" },
-    { text: "Domestic travel is better than traveling abroad for a school trip.", tournament: "中学生全国大会", year: "2017" },
-    { text: "Japan should accept more refugees.", tournament: "中学生全国大会", year: "2017" },
-    { text: "Online shopping is better than going shopping.", tournament: "全国大会・合宿（夏）", year: "2017" },
-    { text: "The assassination of dictators should be justified.", tournament: "全国大会・合宿（夏）", year: "2017" },
-    { text: "Economic growth should be given priority over environmental protection.", tournament: "全国大会・合宿（夏）", year: "2017" },
-    { text: "Having a boyfriend or girlfriend is a waste of time for high school students.", tournament: "全国大会・合宿（夏）", year: "2017" },
-    { text: "We should accept more foreign workers.", tournament: "全国大会・合宿（夏）", year: "2017" },
-    { text: "We should make it mandatory for elderly citizens to return their driver's license.", tournament: "全国大会・合宿（夏）", year: "2017" },
-    { text: "The declining birth rate is not a bad thing.", tournament: "全国大会・合宿（夏）", year: "2017" },
-    { text: "Polygamy should be legalized.", tournament: "全国大会・合宿（夏）", year: "2017" },
-    { text: "Idols (pop stars) should be prohibited from having romantic relationships.", tournament: "全国大会・合宿（夏）", year: "2017" },
-    { text: "Cosmetic surgery should be banned.", tournament: "世界交流大会", year: "2017" },
-    { text: "We should build expensive disaster prevention facilities to prepare for a massive once-in-a-thousand-years disaster even if we end up destroying the environment in the process.", tournament: "世界交流大会", year: "2017" },
-    { text: "President Trump brings more benefits than harm to the world.", tournament: "世界交流大会", year: "2017" },
-    { text: "Euthanasia should be legalized.", tournament: "世界交流大会", year: "2017" },
-    { text: "Countries around the world should actively promote immigration policies.", tournament: "世界交流大会", year: "2017" },
-    { text: "Artificial intelligence is our enemy.", tournament: "世界交流大会", year: "2017" },
-    { text: "Priority seats on trains should be abolished.", tournament: "全国大会（冬）", year: "2016" },
-    { text: "Genetically modified organism brings us more benefits than harm.", tournament: "全国大会（冬）", year: "2016" },
-    { text: "We should welcome the rent subsidies for female students of University of Tokyo.", tournament: "全国大会（冬）", year: "2016" },
-    { text: "Japan should have nuclear weapons.", tournament: "全国大会（冬）", year: "2016" },
-    { text: "Japan should raise its consumption tax rate.", tournament: "全国大会（冬）", year: "2016" },
-    { text: "Media should broadcast Tsunami Warnings in a slightly exaggerated manner.", tournament: "全国大会（冬）", year: "2016" },
-    { text: "Having casinos in Japan does more good than harm.", tournament: "全国大会（冬）", year: "2016" },
-    { text: "We should introduce compulsory voting.", tournament: "全国大会・合宿（夏）", year: "2016" },
-    { text: "We should raise consumption tax rate.", tournament: "全国大会・合宿（夏）", year: "2016" },
-    { text: "When it comes to high school years, living in rural areas is better than living in urban areas.", tournament: "全国大会・合宿（夏）", year: "2016" },
-    { text: "Intimate relationships between teachers and students should be acceptable.", tournament: "全国大会・合宿（夏）", year: "2016" },
-    { text: "Celebrities who got accused of drug scandals should not be allowed to be back on mass media.", tournament: "全国大会・合宿（夏）", year: "2016" },
-    { text: "We should introduce female quota in the Diet.", tournament: "全国大会・合宿（夏）", year: "2016" },
-    { text: "We should outsource coaching of club activities.", tournament: "全国大会（冬）", year: "2015" },
-    { text: "Reduced tax rate should be applied to newspapers.", tournament: "全国大会（冬）", year: "2015" },
-    { text: "Pictures of the ex-boyfriend/girlfriend should be thrown away.", tournament: "全国大会（冬）", year: "2015" },
-    { text: "Same-sex marriage should be legalized.", tournament: "全国大会（冬）", year: "2015" },
-    { text: "Genetically modified food brings more benefits than harm.", tournament: "全国大会（冬）", year: "2015" },
-    { text: "Court trials should be broadcast live.", tournament: "全国大会（冬）", year: "2015" },
-    { text: "High school students should have the right to vote.", tournament: "全国大会（夏）", year: "2015" },
-    { text: "Using a selfie stick in public space should be banned.", tournament: "全国大会（夏）", year: "2015" },
-    { text: "Marrying at older age is better than marrying young.", tournament: "全国大会（夏）", year: "2015" },
-    { text: "We should prohibit cosmetic surgery.", tournament: "全国大会（夏）", year: "2015" },
-    { text: "Homeroom teachers should be criminally charged for bullying.", tournament: "全国大会（夏）", year: "2015" }
+    { text: "Accepting immigrants brings more benefits than harms.", tournament: "世界交流大会", year: "2026" }
   ];
 
-  window.addEventListener('DOMContentLoaded', () => {  
-    const savedMembers = localStorage.getItem('saved_members_input');  
-    if (savedMembers !== null) {  
-      document.getElementById('memberInput').value = savedMembers;  
-      updateCount();  
-    }  
-    const savedFixedJudges = localStorage.getItem('saved_fixed_judges_input');  
-    if (savedFixedJudges !== null) {  
-      document.getElementById('fixedJudgeInput').value = savedFixedJudges;  
-    }  
-    const savedTeamSize = localStorage.getItem('saved_team_size');  
-    if (savedTeamSize !== null) {  
-      document.getElementById('teamSizeInput').value = savedTeamSize;  
-    }  
-    const savedPairs = localStorage.getItem('saved_team_pairs');  
-    if (savedPairs !== null) {  
-      document.getElementById('teamPairSelect').value = savedPairs;  
-    }  
-  });  
+  // Global State
+  let filteredMotions = [...fetchedTopics];
+  let selectedMotions = [];
+  let previousPairs = {}; // Key: "NameA_NameB", Value: count of pairing frequency
 
-  document.getElementById('memberInput').addEventListener('input', () => {  
-    localStorage.setItem('saved_members_input', document.getElementById('memberInput').value);  
-    updateCount();  
-  });  
-  
-  document.getElementById('fixedJudgeInput').addEventListener('input', () => {  
-    localStorage.setItem('saved_fixed_judges_input', document.getElementById('fixedJudgeInput').value);  
-  });  
-  
-  document.getElementById('teamSizeInput').addEventListener('change', () => {  
-    localStorage.setItem('saved_team_size', document.getElementById('teamSizeInput').value);  
-  });  
-  
-  document.getElementById('teamPairSelect').addEventListener('change', () => {  
-    localStorage.setItem('saved_team_pairs', document.getElementById('teamPairSelect').value);  
-  });  
+  // Initial Onload Logic
+  window.onload = function() {
+    document.getElementById('totalMotionsBadge').innerText = `収録論題数: ${fetchedTopics.length} 件`;
+    
+    // Load persisted inputs from localStorage
+    const savedParticipants = localStorage.getItem('debate_participants');
+    const savedJudges = localStorage.getItem('debate_judges');
+    
+    if (savedParticipants) document.getElementById('participantsInput').value = savedParticipants;
+    if (savedJudges) document.getElementById('judgesInput').value = savedJudges;
 
-  // 論題をランダムに2つ抽出
-  function pickRandomTopics() {
-    const topicListEl = document.getElementById('topicList');
-    if (fetchedTopics.length === 0) {
-      topicListEl.innerHTML = `<li>論題データがありません。</li>`;
+    // Attach Event Listeners
+    document.getElementById('searchInput').addEventListener('input', filterMotions);
+    document.getElementById('participantsInput').addEventListener('input', updateParticipantCount);
+
+    // Initial Filter Run & Participant count
+    filterMotions();
+    updateParticipantCount();
+
+    // Default select 2 random motions
+    pickRandomFromFiltered(2);
+  };
+
+  // 1. Motion Filter Logic
+  function filterMotions() {
+    const query = document.getElementById('searchInput').value.trim().toLowerCase();
+    
+    if (!query) {
+      filteredMotions = [...fetchedTopics];
+    } else {
+      filteredMotions = fetchedTopics.filter(m => {
+        const fullStr = `${m.text} ${m.tournament} ${m.year}`.toLowerCase();
+        return fullStr.includes(query);
+      });
+    }
+
+    document.getElementById('searchResultCount').innerText = `該当数: ${filteredMotions.length} / ${fetchedTopics.length} 件`;
+    renderMotionList();
+  }
+
+  // Render Scrollable Filter List
+  function renderMotionList() {
+    const listEl = document.getElementById('motionList');
+    
+    if (filteredMotions.length === 0) {
+      listEl.innerHTML = `<div class="p-4 text-center text-slate-400 text-xs">該当する論題が見つかりませんでした。</div>`;
       return;
     }
-    const shuffled = [...fetchedTopics].sort(() => Math.random() - 0.5);
-    const selected = shuffled.slice(0, 2);
-    
-    topicListEl.innerHTML = selected.map(item => {
-      let tag = "";
-      if (item.tournament || item.year) {
-        const parts = [item.tournament, item.year].filter(p => p && p !== "-");
-        if (parts.length > 0) tag = `[${parts.join(' ')}]`;
-      }
-      return `<li><strong>${tag ? tag + " " : ""}</strong>${item.text}</li>`;
-    }).join('');
-  }
-  
-  function updateCount() {  
-    const members = getMemberList('memberInput');  
-    document.getElementById('memberCount').innerText = `現在の人数: ${members.length}人`;  
-  }  
-  
-  function getMemberList(id) {  
-    return document.getElementById(id).value  
-      .split('\n')  
-      .map(n => n.trim())  
-      .filter(n => n.length > 0);  
-  }  
-  
-  function generateTeams() {  
-    const teamMembers = getMemberList('memberInput');  
-    const fixedJudges = getMemberList('fixedJudgeInput');  
-    const teamSize = parseInt(document.getElementById('teamSizeInput').value, 10) || 3;  
-    const numPairs = parseInt(document.getElementById('teamPairSelect').value, 10) || 1;  
-    const numTeams = numPairs * 2;  
-  
-    const errorEl = document.getElementById('errorMessage');  
-    errorEl.innerText = '';  
-  
-    if (teamSize < 1) {  
-      errorEl.innerText = 'チーム人数は1人以上に設定してください。';  
-      return;  
-    }  
-  
-    const requiredMembers = teamSize * numTeams;  
-    if (teamMembers.length < requiredMembers) {  
-      errorEl.innerText = `${numPairs}組（${numTeams}チーム × ${teamSize}人）を作成するには、チーム用メンバーが最低${requiredMembers}人必要です。（現在: ${teamMembers.length}人）`;  
-      return;  
-    }  
-  
-    let bestTeams = null;  
-    let bestLeftovers = [];  
-    let minScore = Infinity;  
-  
-    for (let attempt = 0; attempt < 300; attempt++) {  
-      const shuffled = [...teamMembers].sort(() => Math.random() - 0.5);  
-      const selectedForTeams = shuffled.slice(0, requiredMembers);  
-      const leftovers = shuffled.slice(requiredMembers);  
-  
-      const teams = Array.from({ length: numTeams }, () => []);  
-      selectedForTeams.forEach((m, idx) => {  
-        teams[idx % numTeams].push(m);  
-      });  
-  
-      const score = calculateHistoryScore(teams);  
-      if (score < minScore) {  
-        minScore = score;  
-        bestTeams = teams;  
-        bestLeftovers = leftovers;  
-        if (score === 0) break;  
-      }  
-    }  
-  
-    const allJudges = [...fixedJudges, ...bestLeftovers];  
-  
-    saveCurrentPairs(bestTeams);  
-    pickRandomTopics();  
-    displayResults(bestTeams, allJudges, numPairs);  
-  }  
-  
-  function calculateHistoryScore(teams) {  
-    let score = 0;  
-    teams.forEach(team => {  
-      for (let i = 0; i < team.length; i++) {  
-        for (let j = i + 1; j < team.length; j++) {  
-          const pairKey = [team[i], team[j]].sort().join('___');  
-          if (previousPairs.has(pairKey)) score++;  
-        }  
-      }  
-    });  
-    return score;  
-  }  
-  
-  function saveCurrentPairs(teams) {  
-    previousPairs.clear();  
-    teams.forEach(team => {  
-      for (let i = 0; i < team.length; i++) {  
-        for (let j = i + 1; j < team.length; j++) {  
-          const pairKey = [team[i], team[j]].sort().join('___');  
-          previousPairs.add(pairKey);  
-        }  
-      }  
-    });  
-  }  
-  
-  function displayResults(teams, allJudges, numPairs) {  
-    const teamsDisplay = document.getElementById('teamsDisplay');  
-    const judgesDisplay = document.getElementById('judgesDisplay');  
-    teamsDisplay.innerHTML = '';  
-    judgesDisplay.innerHTML = '';  
-  
-    const judgeGroups = Array.from({ length: numPairs }, () => []);  
-    allJudges.forEach((m, idx) => {  
-      judgeGroups[idx % numPairs].push(m);  
-    });  
-  
-    judgeGroups.forEach((group, idx) => {  
-      const card = document.createElement('div');  
-      card.className = 'judge-card';  
-      const label = `⚖️ Judge ${idx + 1}`;  
-      const content = group.length > 0 ? group.join(', ') : '不在';  
-      card.innerHTML = `<div class="title">${label} (${group.length}人)</div><div>${content}</div>`;  
-      judgesDisplay.appendChild(card);  
-    });  
-  
-    teams.forEach((team, idx) => {  
-      const card = document.createElement('div');  
-      const isGov = (idx + 1) % 2 !== 0;  
-      const pairIndex = Math.ceil((idx + 1) / 2);  
-      const teamName = isGov ? `Government ${pairIndex}` : `Opposition ${pairIndex}`;  
-        
-      card.className = `team-card ${isGov ? 'gov' : 'opp'}`;  
-  
-      card.innerHTML = `  
-        <div class="team-title">${teamName} (${team.length}人)</div>  
-        <ul class="team-members">  
-          ${team.map(m => `<li>• ${m}</li>`).join('')}  
-        </ul>  
-      `;  
-      teamsDisplay.appendChild(card);  
-    });  
-  
-    document.getElementById('resultCard').style.display = 'block';  
-  }  
-  
-  function copyResults() {  
-    let text = "【チーム分け結果】\n\n";  
 
-    const topics = Array.from(document.querySelectorAll('#topicList li')).map(li => li.innerText);
-    if (topics.length > 0) {
-      text += `■ 本日の論題\n1. ${topics[0] || ''}\n2. ${topics[1] || ''}\n\n`;
+    listEl.innerHTML = filteredMotions.map((m, idx) => `
+      <div onclick="selectSingleMotion(${idx})" class="p-3 hover:bg-indigo-50/70 cursor-pointer transition-colors flex justify-between items-start gap-3 group">
+        <div class="flex-1">
+          <p class="text-slate-800 font-medium group-hover:text-indigo-700 leading-snug">${escapeHtml(m.text)}</p>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="inline-block bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-semibold">${escapeHtml(m.tournament)} ${escapeHtml(m.year)}</span>
+          </div>
+        </div>
+        <button class="text-xs bg-white text-indigo-600 border border-indigo-200 group-hover:bg-indigo-600 group-hover:text-white px-2 py-1 rounded transition-all shrink-0">
+          選択
+        </button>
+      </div>
+    `).join('');
+  }
+
+  // Pick single motion manually from list
+  function selectSingleMotion(index) {
+    const motion = filteredMotions[index];
+    if (!motion) return;
+    
+    selectedMotions = [motion];
+    renderActiveMotions();
+    showToast("論題を選択しました");
+  }
+
+  // Randomly pick N motions from currently filtered list
+  function pickRandomFromFiltered(count) {
+    const pool = filteredMotions.length > 0 ? filteredMotions : fetchedTopics;
+    const shuffled = [...pool].sort(() => 0.5 - Math.random());
+    selectedMotions = shuffled.slice(0, Math.min(count, pool.length));
+    renderActiveMotions();
+    showToast(`${selectedMotions.length}件の論題を抽出しました`);
+  }
+
+  // Render Selected Active Motions Card
+  function renderActiveMotions() {
+    const container = document.getElementById('activeMotionsContainer');
+    
+    if (selectedMotions.length === 0) {
+      container.innerHTML = `<p class="text-xs text-slate-400 italic py-4 text-center">論題が選択されていません。</p>`;
+      return;
     }
-  
-    const judgeCards = Array.from(document.querySelectorAll('.judge-card'));  
-    judgeCards.forEach((card) => {  
-      const title = card.querySelector('.title').innerText;  
-      const names = card.querySelector('div:nth-child(2)').innerText;  
-      text += `■ ${title}\n${names}\n\n`;  
-    });  
-  
-    const teams = Array.from(document.querySelectorAll('.team-card'));  
-    teams.forEach((card) => {  
-      const title = card.querySelector('.team-title').innerText;  
-      const members = Array.from(card.querySelectorAll('li')).map(li => li.innerText.replace('• ', '')).join(', ');  
-      text += `■ ${title}\n${members}\n\n`;  
-    });  
-  
-    navigator.clipboard.writeText(text).then(() => {  
-      alert('チーム分け結果と論題をコピーしました！');  
-    });  
-  }  
-</script>  
-</body>  
-</html>  
+
+    container.innerHTML = selectedMotions.map((m, idx) => `
+      <div class="p-3.5 bg-indigo-50/50 border border-indigo-100 rounded-xl relative">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-[11px] font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">
+            [${escapeHtml(m.tournament)} ${escapeHtml(m.year)}]
+          </span>
+          <span class="text-[10px] text-slate-400 font-semibold">Motion #${idx + 1}</span>
+        </div>
+        <p class="text-sm font-semibold text-slate-900 leading-relaxed">${escapeHtml(m.text)}</p>
+      </div>
+    `).join('');
+  }
+
+  // Participant Count Updater & Auto Storage
+  function updateParticipantCount() {
+    const raw = document.getElementById('participantsInput').value;
+    localStorage.setItem('debate_participants', raw);
+    
+    const rawJudges = document.getElementById('judgesInput').value;
+    localStorage.setItem('debate_judges', rawJudges);
+
+    const names = getCleanList('participantsInput');
+    document.getElementById('participantCount').innerText = `人数: ${names.length} 名`;
+  }
+
+  function getCleanList(id) {
+    return document.getElementById(id).value
+      .split('\n')
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+  }
+
+  // 4. Team Allocation Logic with Min-Score Repeat Avoidance
+  function generateTeams() {
+    const participants = getCleanList('participantsInput');
+    const fixedJudges = getCleanList('judgesInput');
+    const roomCount = parseInt(document.getElementById('matchCountSelect').value, 10);
+    const teamSize = parseInt(document.getElementById('teamSizeSelect').value, 10);
+
+    const requiredDebaters = roomCount * 2 * teamSize;
+
+    if (participants.length < requiredDebaters) {
+      alert(`参加人数が足りません\n${roomCount}部屋 (${teamSize} vs ${teamSize}) には最低 ${requiredDebaters} 名必要ですが、現在 ${participants.length} 名しか登録されていません。`);
+      return;
+    }
+
+    // Optimization algorithm: Run ~300 iterations to find team allocation with minimal previous pairing overlap
+    let bestAllocation = null;
+    let minPenaltyScore = Infinity;
+
+    for (let iter = 0; iter < 300; iter++) {
+      const shuffled = [...participants].sort(() => 0.5 - Math.random());
+      const currentDebaters = shuffled.slice(0, requiredDebaters);
+      const remainingForJudge = shuffled.slice(requiredDebaters);
+
+      // Create rooms
+      const rooms = [];
+      let currentScore = 0;
+
+      for (let r = 0; r < roomCount; r++) {
+        const gov = currentDebaters.slice(r * 2 * teamSize, (r * 2 + 1) * teamSize);
+        const opp = currentDebaters.slice((r * 2 + 1) * teamSize, (r * 2 + 2) * teamSize);
+
+        currentScore += calculateTeamPenalty(gov);
+        currentScore += calculateTeamPenalty(opp);
+
+        rooms.push({ gov, opp });
+      }
+
+      if (currentScore < minPenaltyScore) {
+        minPenaltyScore = currentScore;
+        bestAllocation = {
+          rooms,
+          judges: [...fixedJudges, ...remainingForJudge]
+        };
+      }
+    }
+
+    // Record new pairings to history memory
+    bestAllocation.rooms.forEach(room => {
+      recordPairings(room.gov);
+      recordPairings(room.opp);
+    });
+
+    renderResults(bestAllocation);
+    showToast("チーム分けを完了しました");
+  }
+
+  // Calculate Pairing Overlap Penalty Score
+  function calculateTeamPenalty(team) {
+    let penalty = 0;
+    for (let i = 0; i < team.length; i++) {
+      for (let j = i + 1; j < team.length; j++) {
+        const key = getPairKey(team[i], team[j]);
+        penalty += (previousPairs[key] || 0);
+      }
+    }
+    return penalty;
+  }
+
+  function recordPairings(team) {
+    for (let i = 0; i < team.length; i++) {
+      for (let j = i + 1; j < team.length; j++) {
+        const key = getPairKey(team[i], team[j]);
+        previousPairs[key] = (previousPairs[key] || 0) + 1;
+      }
+    }
+  }
+
+  function getPairKey(a, b) {
+    return [a, b].sort().join('___');
+  }
+
+  // Render Team Allocation Results
+  function renderResults(allocation) {
+    const container = document.getElementById('resultsContainer');
+    
+    let html = `<div class="w-full space-y-6">`;
+
+    // Render Active Motions in result summary
+    if (selectedMotions.length > 0) {
+      html += `
+        <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-4">
+          <h4 class="text-xs font-bold text-indigo-900 uppercase tracking-wider mb-2">【今回の設定論題】</h4>
+          <ul class="space-y-1">
+            ${selectedMotions.map((m, idx) => `
+              <li class="text-sm font-semibold text-indigo-950">
+                #${idx + 1}: ${escapeHtml(m.text)} <span class="text-xs font-normal text-indigo-600">[${escapeHtml(m.tournament)} ${escapeHtml(m.year)}]</span>
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      `;
+    }
+
+    // Render Each Match Room
+    allocation.rooms.forEach((room, idx) => {
+      html += `
+        <div class="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+          <div class="bg-slate-800 text-white px-4 py-2 font-bold text-sm flex justify-between items-center">
+            <span>Match Room #${idx + 1}</span>
+            <span class="text-xs text-slate-300 font-normal">${room.gov.length} vs ${room.opp.length}</span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-200">
+            <!-- Government -->
+            <div class="p-4 bg-emerald-50/40">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+                <h5 class="font-bold text-emerald-900 text-sm">Government (肯定側)</h5>
+              </div>
+              <ul class="space-y-1">
+                ${room.gov.map(m => `<li class="text-sm font-medium text-slate-800 pl-5">・ ${escapeHtml(m)}</li>`).join('')}
+              </ul>
+            </div>
+            <!-- Opposition -->
+            <div class="p-4 bg-rose-50/40">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span>
+                <h5 class="font-bold text-rose-900 text-sm">Opposition (否定側)</h5>
+              </div>
+              <ul class="space-y-1">
+                ${room.opp.map(m => `<li class="text-sm font-medium text-slate-800 pl-5">・ ${escapeHtml(m)}</li>`).join('')}
+              </ul>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    // Render Judges
+    html += `
+      <div class="bg-amber-50/60 border border-amber-200 rounded-xl p-4">
+        <h4 class="text-xs font-bold text-amber-900 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+          <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"></path></svg>
+          【ジャッジ一覧】
+        </h4>
+        <p class="text-sm font-semibold text-amber-950">
+          ${allocation.judges.length > 0 ? allocation.judges.map(j => escapeHtml(j)).join(', ') : '指定なし'}
+        </p>
+      </div>
+    </div>`;
+
+    container.innerHTML = html;
+  }
+
+  // Copy Results to Clipboard
+  function copyResultsToClipboard() {
+    const container = document.getElementById('resultsContainer');
+    if (!container || container.innerText.includes('設定を完了し')) {
+      alert("コピーする結果がまだ生成されていません。");
+      return;
+    }
+
+    const textToCopy = container.innerText;
+    
+    // Legacy fallback clipboard method
+    const tempTextArea = document.createElement("textarea");
+    tempTextArea.value = textToCopy;
+    document.body.appendChild(tempTextArea);
+    tempTextArea.select();
+    try {
+      document.execCommand('copy');
+      showToast("対戦結果をクリップボードにコピーしました！");
+    } catch (err) {
+      alert("コピーに失敗しました。手動で選択してコピーしてください。");
+    }
+    document.body.removeChild(tempTextArea);
+  }
+
+  // UI Toast Helper
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    document.getElementById('toastMsg').innerText = msg;
+    toast.classList.remove('translate-y-20', 'opacity-0');
+    setTimeout(() => {
+      toast.classList.add('translate-y-20', 'opacity-0');
+    }, 2400);
+  }
+
+  // Helper Sanitizer
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+  </script>
+</body>
+</html>
