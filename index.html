@@ -3,7 +3,9 @@
 <head>  
   <meta charset="UTF-8">  
   <meta name="viewport" content="width=device-width, initial-scale=1.0">  
-  <title>自動チーム分けツール</title>  
+  <title>自動チーム分け＆論題抽出ツール</title>  
+  <!-- SheetJS (Excelファイルを直接ブラウザで読み込むためのライブラリ) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>  
     :root {  
       --bg: #f4f7f6;  
@@ -103,7 +105,7 @@
       font-size: 0.95rem;
       color: #5D4037;
       margin-bottom: 6px;
-    }
+    }  
   
     .row { display: flex; gap: 8px; }  
     .row > * { flex: 1; }  
@@ -116,7 +118,11 @@
   <h1>自動チーム分けツール</h1>  
   
   <div class="card">  
-    <h2>1. メンバー (1人入力するごとに改行してください)</h2>  
+    <h2>0. 論題ファイル（debate_motions.xlsx）の読み込み</h2>  
+    <input type="file" id="excelFile" accept=".xlsx, .xls, .csv" style="margin-top: 6px; padding: 6px;" />
+    <div id="fileStatus" style="font-size: 0.85rem; color: #666; margin-top: 4px;">※Googleドライブからダウンロードした「debate_motions.xlsx」を選択してください。</div>
+
+    <h2 style="margin-top: 14px;">1. メンバー (1人入力するごとに改行してください)</h2>  
     <textarea id="memberInput" rows="5" placeholder="チーム分けするメンバー名を入力..."></textarea>  
     <div id="memberCount" style="text-align: right; font-size: 0.85rem; color: #666; margin-top: 4px;">現在の人数: 0人</div>  
       
@@ -166,18 +172,7 @@
   
 <script>  
   let previousPairs = new Set();  
-
-  // 大会名と年度付きの論題データベース
-  const motionDatabase = [
-    { text: "THW ban social media for children under 16.", tournament: "HPDU", year: "2024" },
-    { text: "THW abolish school uniforms in high schools.", tournament: "HEnDA", year: "2023" },
-    { text: "THBT AI technology will do more harm than good to human society.", tournament: "PDA", year: "2023" },
-    { text: "THW introduce a four-day workweek.", tournament: "WSDC", year: "2022" },
-    { text: "THW make university education free for all students.", tournament: "HPDU推奨", year: "2024" },
-    { text: "THBT space exploration should be prioritized over deep ocean exploration.", tournament: "HEnDA", year: "2022" },
-    { text: "THW mandate voting in national elections.", tournament: "PDA", year: "2024" },
-    { text: "THW ban private cars in major city centers.", tournament: "WSDC", year: "2023" }
-  ];
+  let fetchedTopics = []; 
 
   window.addEventListener('DOMContentLoaded', () => {  
     const savedMembers = localStorage.getItem('saved_members_input');  
@@ -199,6 +194,41 @@
     }  
   });  
 
+  // Excelファイルが選択されたときの処理
+  document.getElementById('excelFile').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        fetchedTopics = [];
+        // 1行目はヘッダーと仮定して2行目から読み込み
+        for (let i = 1; i < json.length; i++) {
+          const row = json[i];
+          if (row && row[0]) {
+            fetchedTopics.push({
+              text: row[0] ? String(row[0]).trim() : "",
+              tournament: row[1] ? String(row[1]).trim() : "",
+              year: row[2] ? String(row[2]).trim() : ""
+            });
+          }
+        }
+        document.getElementById('fileStatus').innerHTML = `<span style="color: green; font-weight: bold;">✔ 論題データ読み込み完了（全 ${fetchedTopics.length} 件）</span>`;
+      } catch (err) {
+        console.error(err);
+        document.getElementById('fileStatus').innerHTML = `<span style="color: red;">ファイルの読み込みに失敗しました。</span>`;
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+
   document.getElementById('memberInput').addEventListener('input', () => {  
     localStorage.setItem('saved_members_input', document.getElementById('memberInput').value);  
     updateCount();  
@@ -216,13 +246,24 @@
     localStorage.setItem('saved_team_pairs', document.getElementById('teamPairSelect').value);  
   });  
 
-  // 大会名・年度つき論題をランダムに2つ抽出
+  // 論題をランダムに2つ抽出
   function pickRandomTopics() {
-    const shuffled = [...motionDatabase].sort(() => Math.random() - 0.5);
+    const topicListEl = document.getElementById('topicList');
+    if (fetchedTopics.length === 0) {
+      topicListEl.innerHTML = `<li>「debate_motions.xlsx」ファイルが選択されていないか、データが読み込まれていません。</li>`;
+      return;
+    }
+    const shuffled = [...fetchedTopics].sort(() => Math.random() - 0.5);
     const selected = shuffled.slice(0, 2);
     
-    const topicListEl = document.getElementById('topicList');
-    topicListEl.innerHTML = selected.map(item => `<li><strong>[${item.tournament} ${item.year}]</strong> ${item.text}</li>`).join('');
+    topicListEl.innerHTML = selected.map(item => {
+      let tag = "";
+      if (item.tournament || item.year) {
+        const parts = [item.tournament, item.year].filter(p => p && p !== "-");
+        if (parts.length > 0) tag = `[${parts.join(' ')}]`;
+      }
+      return `<li><strong>${tag ? tag + " " : ""}</strong>${item.text}</li>`;
+    }).join('');
   }
   
   function updateCount() {  
@@ -358,7 +399,7 @@
 
     const topics = Array.from(document.querySelectorAll('#topicList li')).map(li => li.innerText);
     if (topics.length > 0) {
-      text += `■ 本日の論題\n1. ${topics[0]}\n2. ${topics[1]}\n\n`;
+      text += `■ 今日の論題\n1. ${topics[0] || ''}\n2. ${topics[1] || ''}\n\n`;
     }
   
     const judgeCards = Array.from(document.querySelectorAll('.judge-card'));  
