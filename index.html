@@ -20,11 +20,11 @@
   <header class="bg-indigo-700 text-white shadow-md py-6 px-4 mb-6">
     <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight">ディベート チーム＆論題ジェネレーター</h1>
+        <h1 class="text-2xl font-bold tracking-tight">チーム分け/論題選択</h1>
         <p class="text-indigo-200 text-sm mt-1">論題キーワード検索 ＋ チーム組み分けツール</p>
       </div>
       <div class="text-xs bg-indigo-800/60 border border-indigo-500/40 rounded-lg px-3 py-2 text-indigo-100">
-        <span class="font-semibold" id="totalMotionsBadge">収録論題数: 0 件</span> (完全オフライン対応)
+        <span class="font-semibold" id="totalMotionsBadge">収録論題数: 0 件</span>
       </div>
     </div>
   </header>
@@ -107,16 +107,14 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <!-- Active Participants -->
           <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">参加メンバー一覧 (改行区切り)</label>
-            <textarea id="participantsInput" rows="7" placeholder="山田太郎&#10;佐藤花子&#10;鈴木一郎&#10;高橋次郎..."
+            <label class="block text-xs font-semibold text-slate-700 mb-1">メンバー (1人入力するごとに改行)</label>
                       class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"></textarea>
             <div class="text-right text-xs text-slate-500 mt-1" id="participantCount">人数: 0 名</div>
           </div>
 
           <!-- Fixed Judges -->
           <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">固定ジャッジ (改行区切り/任意)</label>
-            <textarea id="judgesInput" rows="7" placeholder="田中先生&#10;伊藤先輩..."
+            <label class="block text-xs font-semibold text-slate-700 mb-1">固定ジャッジ (1人入力するごとに改行/任意)</label>
                       class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"></textarea>
             <p class="text-[11px] text-slate-400 mt-1">※余った参加メンバーも自動でジャッジに配属されます。</p>
           </div>
@@ -125,11 +123,11 @@
         <!-- Match & Team Size Settings -->
         <div class="grid grid-cols-2 gap-4 pt-2 border-t border-slate-100 mb-5">
           <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">同時対戦部屋数</label>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">組数</label>
             <select id="matchCountSelect" class="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-indigo-500">
-              <option value="1" selected>1 部屋 (Gov vs Opp)</option>
-              <option value="2">2 部屋 (同時進行)</option>
-              <option value="3">3 部屋 (同時進行)</option>
+              <option value="1" selected>1組</option>
+              <option value="2">2組</option>
+              <option value="3">3組</option>
             </select>
           </div>
           <div>
@@ -156,12 +154,12 @@
       <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
         <div class="flex flex-wrap justify-between items-center gap-3 mb-4 border-b border-slate-100 pb-3">
           <div>
-            <h2 class="text-xl font-bold text-slate-900">3. 対戦・チーム組み分け結果</h2>
+            <h2 class="text-xl font-bold text-slate-900">3.チーム組み分け</h2>
             <p class="text-xs text-slate-500">繰り返し重複を避ける最適化スコアリングアルゴリズムを適用済み</p>
           </div>
           <button onclick="copyResultsToClipboard()" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold shadow flex items-center gap-1.5 transition-all">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
-            結果テキストをコピー
+            結果をコピー
           </button>
         </div>
 
